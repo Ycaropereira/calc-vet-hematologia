@@ -10,8 +10,19 @@ type FieldState = {
 };
 
 function parsePtNumber(raw: string): number | null {
-  const cleaned = raw.replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
-  if (!cleaned) return null;
+  const trimmed = raw.replace(/\s/g, "");
+  if (!trimmed) return null;
+
+  let cleaned = trimmed;
+
+  if (cleaned.includes(",")) {
+    cleaned = cleaned.replace(/\./g, "").replace(",", ".");
+  } else if (cleaned.includes(".")) {
+    const parts = cleaned.split(".");
+    const looksLikeThousands = parts.length > 1 && parts.slice(1).every((p) => p.length === 3);
+    cleaned = looksLikeThousands ? parts.join("") : cleaned;
+  }
+
   const n = Number(cleaned);
   return Number.isFinite(n) ? n : null;
 }
@@ -25,6 +36,12 @@ function formatFixed(n: number, digits: number): string {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   }).format(n);
+}
+
+function formatAbsReticThou(n: number): string {
+  if (Math.abs(n) < 1) return formatFixed(n, 2);
+  if (Math.abs(n) < 10) return formatFixed(n, 1);
+  return formatInt(n);
 }
 
 function Field({
@@ -174,7 +191,7 @@ export default function HematologiaCalc() {
             <div className="rounded-xl bg-white p-4 shadow-sm">
               <p className="text-sm text-zinc-600">Reticulócitos absolutos (mil/µL)</p>
               <p className="mt-1 text-2xl font-bold text-zinc-900">
-                {absReticThou == null ? "—" : formatInt(absReticThou)}
+                {absReticThou == null ? "—" : formatAbsReticThou(absReticThou)}
               </p>
             </div>
             <div className="rounded-xl bg-white p-4 shadow-sm">
