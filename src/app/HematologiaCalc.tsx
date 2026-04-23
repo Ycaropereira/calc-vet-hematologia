@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 type Especie = "cao" | "gato";
+type ReticInputMode = "pct" | "count";
 
 type FieldState = {
   raw: string;
@@ -76,10 +77,12 @@ function Field({
 
 export default function HematologiaCalc() {
   const [especie, setEspecie] = useState<Especie>("cao");
+  const [reticMode, setReticMode] = useState<ReticInputMode>("pct");
 
   const [rbc, setRbc] = useState<FieldState>({ raw: "5.200", value: 5200 });
   const [hct, setHct] = useState<FieldState>({ raw: "35", value: 35 });
   const [reticPct, setReticPct] = useState<FieldState>({ raw: "1,2", value: 1.2 });
+  const [reticCount, setReticCount] = useState<FieldState>({ raw: "", value: null });
 
   const [wbc, setWbc] = useState<FieldState>({ raw: "12.300", value: 12300 });
   const [nrbcPer100, setNrbcPer100] = useState<FieldState>({ raw: "0", value: 0 });
@@ -90,21 +93,27 @@ export default function HematologiaCalc() {
 
   const normalHct = especie === "cao" ? 45 : 35;
 
+  const reticPctUsed = useMemo(() => {
+    if (reticMode === "pct") return reticPct.value;
+    if (reticCount.value == null) return null;
+    return reticCount.value / 10;
+  }, [reticMode, reticPct.value, reticCount.value]);
+
   const rbcMill = useMemo(() => {
     if (rbc.value == null) return null;
     return rbc.value / 1000;
   }, [rbc.value]);
 
   const absReticThou = useMemo(() => {
-    if (rbcMill == null || reticPct.value == null) return null;
-    return reticPct.value * rbcMill * 10;
-  }, [rbcMill, reticPct.value]);
+    if (rbcMill == null || reticPctUsed == null) return null;
+    return reticPctUsed * rbcMill * 10;
+  }, [rbcMill, reticPctUsed]);
 
   const correctedReticPct = useMemo(() => {
-    if (reticPct.value == null || hct.value == null) return null;
+    if (reticPctUsed == null || hct.value == null) return null;
     if (normalHct <= 0) return null;
-    return reticPct.value * (hct.value / normalHct);
-  }, [reticPct.value, hct.value, normalHct]);
+    return reticPctUsed * (hct.value / normalHct);
+  }, [reticPctUsed, hct.value, normalHct]);
 
   const wbcCorr = useMemo(() => {
     if (wbc.value == null || nrbcPer100.value == null) return null;
@@ -117,6 +126,7 @@ export default function HematologiaCalc() {
     setRbc({ raw: "", value: null });
     setHct({ raw: "", value: null });
     setReticPct({ raw: "", value: null });
+    setReticCount({ raw: "", value: null });
   }
 
   function clearWbc() {
@@ -176,13 +186,37 @@ export default function HematologiaCalc() {
             onChange={(raw) => update(setRbc, raw)}
           />
 
-          <Field
-            label="Reticulócitos (%)"
-            hint="Ex.: 1,2"
-            state={reticPct}
-            placeholder="Ex.: 1,2"
-            onChange={(raw) => update(setReticPct, raw)}
-          />
+          <label className="block">
+            <span className="text-sm font-medium text-zinc-800">Entrada de reticulócitos</span>
+            <select
+              className="mt-2 w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-zinc-900 shadow-sm outline-none focus:border-sky-400"
+              value={reticMode}
+              onChange={(e) => setReticMode(e.target.value as ReticInputMode)}
+            >
+              <option value="pct">% (direto do laudo)</option>
+              <option value="count">Contagem (n por 1000 hemácias)</option>
+            </select>
+            <p className="mt-2 text-xs text-zinc-500">10 contados → 1,0%</p>
+          </label>
+
+          {reticMode === "pct" ? (
+            <Field
+              label="Reticulócitos (%)"
+              hint="Ex.: 0,5"
+              state={reticPct}
+              placeholder="Ex.: 1,2"
+              onChange={(raw) => update(setReticPct, raw)}
+            />
+          ) : (
+            <Field
+              label="Reticulócitos (n/1000 hemácias)"
+              hint="Ex.: 10"
+              state={reticCount}
+              placeholder="Ex.: 10"
+              onChange={(raw) => update(setReticCount, raw)}
+              inputMode="numeric"
+            />
+          )}
         </div>
 
         <div className="mt-6 rounded-2xl bg-zinc-50 p-5">
