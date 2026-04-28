@@ -91,7 +91,7 @@ export default function HematologiaCalc() {
     setter({ raw, value: parsePtNumber(raw) });
   }
 
-  const normalHct = especie === "cao" ? 45 : 35;
+  const normalHct = especie === "cao" ? 45 : 37;
 
   const reticPctUsed = useMemo(() => {
     if (reticMode === "pct") return reticPct.value;
